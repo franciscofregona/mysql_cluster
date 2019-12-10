@@ -1,0 +1,3 @@
+CREATE USER '{{mysql_nodes.slave.mysql_replication_user}}'@'%' IDENTIFIED BY '{{mysql_nodes.slave.mysql_rpl_password}}';
+GRANT REPLICATION SLAVE ON *.* TO '{{mysql_nodes.slave.mysql_replication_user}}'@'%';
+FLUSH PRIVILEGES;

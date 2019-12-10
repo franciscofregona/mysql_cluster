@@ -1,0 +1,5 @@
+[mysqld]
+server-id			= 2
+binlog_do_db		= "{{ mysql_db }}"
+log_bin				= mysql-bin
+relay-log			= mysql-relay-bin.log
