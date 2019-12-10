@@ -1,2 +1,0 @@
-CHANGE MASTER TO MASTER_HOST="mysql_master", MASTER_USER="{{mysql_nodes.slave.mysql_replication_user}}",MASTER_PASSWORD="{{mysql_nodes.slave.mysql_rpl_password}}", MASTER_LOG_FILE="{{spec_fields[0]}}", MASTER_LOG_POS={{spec_fields[1]}}; START SLAVE;
-START SLAVE;
