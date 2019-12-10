@@ -1,2 +1,122 @@
 ---
 # tasks file for mysql_cluster
+- name: MySQL | Ensure the mysql group exists
+  group:
+    name: "{{ mysql_group }}"
+    state: present
+
+- name: MySQL | Ensure mysql user exists
+  user:
+    name: "{{ mysql_user }}"
+    shell: /bin/nologin
+    state: present
+
+- name: MySQL | Erase previous databases and settings
+  file:
+    path: "{{mysql_host_files_path}}"
+    state: absent
+
+- name: MySQL | Create persistence directory
+  file:
+    path: "{{ mysql_host_files_path }}/{{ item.key }}/data"
+    state: directory
+    owner: "{{ mysql_user }}"
+    group: "{{ mysql_group }}"
+    recurse: yes
+  with_dict: "{{ mysql_nodes }}"
+
+- name: MySQL | Create config directory
+  file:
+    path: "{{ mysql_host_files_path }}/{{ item.key }}/config"
+    state: directory
+    owner: "{{ mysql_user }}"
+    group: "{{ mysql_group }}"
+    recurse: yes
+  with_dict: "{{ mysql_nodes }}"
+
+- name: MySQL | Create startup directory
+  file:
+    path: "{{ mysql_host_files_path }}/{{ item.key }}/startup"
+    state: directory
+    owner: "{{ mysql_user }}"
+    group: "{{ mysql_group }}"
+    recurse: yes
+  with_dict: "{{ mysql_nodes }}"
+
+- name: MySQL | Template configuration files for Master and Slave
+  template:
+    src: "{{ item.value.config_file }}"
+    dest: "{{ mysql_host_files_path }}/{{item.key}}/config/config.cnf"
+    owner: "{{ mysql_user }}"
+    group: "{{ mysql_group }}"
+    mode: '0644'
+  with_dict: "{{mysql_nodes}}"
+
+- name: MySQL | Template startup operation files for Master and Slave
+  template:
+    src: "{{ item.value.startup_file }}.j2"
+    dest: "{{ mysql_host_files_path }}/{{item.key}}/startup/{{ item.value.startup_file }}.sql"
+    owner: "{{ mysql_user }}"
+    group: "{{ mysql_group }}"
+    mode: '0777'
+  with_dict: "{{mysql_nodes}}"
+
+- name: MySQL | Create the MySQL network
+  docker_network:
+    name: "{{ mysql_network_name }}"
+
+- name: MySQL | Run MySQL container(s)
+  docker_container:
+    name: "{{ 'mysql_' ~ item.key }}"
+    image: "{{ mysql_image }}"
+    state: started
+    recreate: yes
+    command: --log-error-verbosity 1
+    privileged: yes
+    # published_ports:
+    #   - "{{3306}}:3306"
+    volumes:
+      - "{{ mysql_host_files_path }}/{{ item.key }}/config:/etc/mysql/conf.d"
+      - "{{ mysql_host_files_path }}/{{ item.key }}/data:/var/lib/mysql"
+      - "{{ mysql_host_files_path }}/{{ item.key }}/startup:/docker-entrypoint-initdb.d"
+    networks:
+      - name: "{{ mysql_network_name }}"
+    env:
+      MYSQL_ROOT_PASSWORD: "{{mysql_root_password}}"
+      MYSQL_DATABASE: "{{mysql_db}}"
+      MYSQL_USER: "{{item.value.mysql_user}}"
+      MYSQL_PASSWORD: "{{item.value.mysql_password}}"
+  with_dict: "{{ mysql_nodes }}"
+
+  #Nodes are not (usually) ready that fast. So, wait for them.
+- name: MySQL | Sleep for 40 seconds and continue with play
+  wait_for:
+    timeout: 40
+  delegate_to: localhost
+
+- name: MySQL | Get the replication specs from the Master
+  shell: docker exec mysql_master sh -c 'export MYSQL_PWD={{mysql_root_password}}; mysql -u root -e "SHOW MASTER STATUS"'
+  register: replication_info
+
+- name: MySQL | Find the replication specs on the info
+  set_fact:
+    spec_line: "{{replication_info.stdout | regex_search('.*bin.*')}}"
+
+- name: MySQL | Split the replication specs on spec_fields
+  set_fact:
+    spec_fields: "{{spec_line.split('\t')}}"
+
+- name: Debug MySQL | Test the spec_fields.
+  debug:
+    msg: "{{ spec_fields[0]}}, {{spec_fields[1]}}"
+
+- name: MySQL | Template the replication setup
+  template:
+    src: replication.j2
+    dest: "{{ mysql_host_files_path }}/slave/startup/replication.sql"
+    owner: "{{ mysql_user }}"
+    group: "{{ mysql_group }}"
+    mode: '0777'
+
+- name: MySQL | Set the slave to replicate from the master
+  shell: docker exec mysql_slave mysql -u root -p{{mysql_root_password}} <{{ mysql_host_files_path }}/slave/startup/replication.sql

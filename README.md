@@ -1,22 +1,50 @@
-Role Name
-=========
+mysql_cluster
+=============
 
-A brief description of the role goes here.
+Small role to set up a master and a slave MySQL nodes on docker containers.
 
 Requirements
 ------------
 
-Any pre-requisites that may not be covered by Ansible itself or the role should be mentioned here. For instance, if the role uses the EC2 module, it may be a good idea to mention in this section that the boto package is required.
+Docker and docker python module. Great fit to geerlingguy.docker and geerlingguy.pip.
 
 Role Variables
 --------------
 
-A description of the settable variables for this role should go here, including any variables that are in defaults/main.yml, vars/main.yml, and any variables that can/should be set via parameters to the role. Any variables that are read from other roles and/or the global scope (ie. hostvars, group vars, etc.) should be mentioned here as well.
+Variables with their default values:
+
+mysql_user: mysql  
+mysql_group: mysql  
+mysql_host_files_path: "/mysql"  
+  
+mysql_nodes:  
+  master:  
+    config_file: master_conf.j2  
+    startup_file: master_startup  
+    mysql_user: master_user  
+    mysql_password: "{{mysql_master_user_password}}"  
+  slave:  
+    config_file: slave_conf.j2  
+    startup_file: slave_startup  
+    mysql_replication_user: replication_user  
+    mysql_rpl_password: "{{mysql_repl_user_password}}"  
+    mysql_user: other_user  
+    mysql_password: "{{mysql_slave_user_password}}"  
+mysql_network_name: mysql  
+mysql_image: "mysql:5.7.28"  
+mysql_db: "my-db"  
+
+Secrets, no defaults, **must be defined!**:
+
+* mysql_root_password
+* mysql_master_user_password	_#PW for the user created on the master_
+* mysql_slave_user_password		_#PW for the user created on the slave_
+* mysql_repl_user_password		_#PW for the replication user_
 
 Dependencies
 ------------
 
-A list of other roles hosted on Galaxy should go here, plus any details in regards to parameters that may need to be set for other roles, or variables that are used from other roles.
+None.
 
 Example Playbook
 ----------------
@@ -25,14 +53,36 @@ Including an example of how to use your role (for instance, with variables passe
 
     - hosts: servers
       roles:
-         - { role: username.rolename, x: 42 }
+         - { role: username.rolename }
+
+Test if it works with
+---------------------
+
+Master node:
+```bash
+(host) docker exec -it mysql_master bash
+(master) mysql -p
+(password)
+(master) use my-db;
+(master) create table code(code int);
+(master) insert into code values (100), (200);
+```
+
+Slave node:
+```bash
+(host) docker exec -it mysql_slave bash
+(slave) mysql -p
+(password)
+(slave) use my-db;
+(slave) select * from code \G
+```
 
 License
 -------
 
-BSD
+GNU-GPL V3.0
 
 Author Information
 ------------------
 
-An optional section for the role authors to include contact information, or a website (HTML is not allowed).
+[Francisco Fregona](franciscofregona@gmail.com)
