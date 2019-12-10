@@ -18,18 +18,18 @@ mysql_group: mysql
 mysql_host_files_path: "/mysql"  
   
 mysql_nodes:  
-  master:  
-    config_file: master_conf.j2  
-    startup_file: master_startup  
-    mysql_user: master_user  
-    mysql_password: "{{mysql_master_user_password}}"  
-  slave:  
-    config_file: slave_conf.j2  
-    startup_file: slave_startup  
-    mysql_replication_user: replication_user  
-    mysql_rpl_password: "{{mysql_repl_user_password}}"  
-    mysql_user: other_user  
-    mysql_password: "{{mysql_slave_user_password}}"  
+&nbsp;&nbsp;master:  
+&nbsp;&nbsp;&nbsp;&nbsp;config_file: master_conf.j2  
+&nbsp;&nbsp;&nbsp;&nbsp;startup_file: master_startup  
+&nbsp;&nbsp;&nbsp;&nbsp;mysql_user: master_user  
+&nbsp;&nbsp;&nbsp;&nbsp;mysql_password: "{{mysql_master_user_password}}"  
+&nbsp;&nbsp;slave:  
+&nbsp;&nbsp;&nbsp;&nbsp;config_file: slave_conf.j2  
+&nbsp;&nbsp;&nbsp;&nbsp;startup_file: slave_startup  
+&nbsp;&nbsp;&nbsp;&nbsp;mysql_replication_user: replication_user  
+&nbsp;&nbsp;&nbsp;&nbsp;mysql_rpl_password: "{{mysql_repl_user_password}}"  
+&nbsp;&nbsp;&nbsp;&nbsp;mysql_user: other_user  
+&nbsp;&nbsp;&nbsp;&nbsp;mysql_password: "{{mysql_slave_user_password}}"  
 mysql_network_name: mysql  
 mysql_image: "mysql:5.7.28"  
 mysql_db: "my-db"  
